@@ -1,4 +1,4 @@
-# Warping [![Build Status](https://travis-ci.org/loicNorgeot/Warping.svg?branch=master)](https://travis-ci.org/loicNorgeot/Warping)
+# Warping [![Build Status](https://travis-ci.org/ISCDtoolbox/Warping.svg?branch=master)](https://travis-ci.org/ISCDtoolbox/Warping)
 This repository contains the code for warping a source mesh by deforming a closed template mesh.
 
 ### Installation
