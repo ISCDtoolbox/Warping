@@ -243,8 +243,8 @@ int main(int argc,char **argv) {
   memset(&sol,0,sizeof(Sol));
   sol.nit = LS_MAXIT;
 
-  info.imprim = 0;
-  info.debug  = 0;
+  info.imprim = 1;
+  info.debug  = 1;
   info.nit    = MAXIT;
   info.load   = LOAD;
   info.lambda = LS_E * LS_NU /( (1 + LS_NU)*(1-2*LS_NU));
@@ -322,6 +322,7 @@ int main(int argc,char **argv) {
 
 //  while( count <= 0.9*countmax && count3 <=info.nit ) {
   while( count3 <=info.nit ) {
+    //fprintf(stdout, "%d\n", count3);
     sol.err = LS_RES;
     if (!elasti1_3d(&extmesh,&sol) ) break;
     count1 = count;
