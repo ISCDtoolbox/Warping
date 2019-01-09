@@ -321,7 +321,7 @@ int main(int argc,char **argv) {
 
 
 //  while( count <= 0.9*countmax && count3 <=info.nit ) {
-  while( count3 <=info.nit ) {
+  while( count3 <=info.nit-1 ) {
     //fprintf(stdout, "%d\n", count3);
     sol.err = LS_RES;
     if (!elasti1_3d(&extmesh,&sol) ) break;
@@ -347,7 +347,8 @@ int main(int argc,char **argv) {
 
   /* save file */
   if ( info.imprim ) fprintf(stdout,"\n  -- WRITING DATA FILE %s\n",extmesh.name);
-  if(!info.debug) if (!saveMesh(&extmesh,0)) return (1);
+  //if(!info.debug) if (!saveMesh(&extmesh,0)) return (1);
+  saveMesh(&extmesh,0);
   chrono(ON,&info.ctim[1]);
   free(extmesh.tetra);
   free(extmesh.point);
