@@ -189,6 +189,12 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
 
     ip1 = bucket->head[ica];
     pt1 = &mesh->tria[ip1];
+
+    // Attention ici!!! Il peut y avoir un seg fault due à une taille de
+    // bucket trop petit. Essayer d'augmenter la constante de préprocesseur
+    // BUCKSIZ (64 par défault) dans le fichier main.c. On a essayé 128
+    // et ca marche (04/02/2019 16:41)
+
     ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
     if(ier2) {
       if(dapp[0]<dm[0]){
@@ -206,6 +212,11 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
     while ( bucket->link[iptria+s] ) {
       ip = bucket->link[iptria+s];
       pt1 = &mesh->tria[ip];
+
+      // Attention ici!!! Il peut y avoir un seg fault due à une taille de
+      // bucket trop petit. Essayer d'augmenter la constante de préprocesseur
+      // BUCKSIZ (64 par défault) dans le fichier main.c. On a essayé 128
+      // et ca marche (04/02/2019 16:41)
 
       ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
       if (ier2) {
