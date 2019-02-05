@@ -1,5 +1,5 @@
 #include "warping.h"
-#define BUCKSIZ 128 //64 // we have increased size of bucket (yield errors)
+#define BUCKSIZ 64 //128 //64 // we have increased size of bucket (yield errors)
                          // 04/02/2019 16:48
 Info  info;
 
