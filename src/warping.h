@@ -113,7 +113,7 @@ int     loadSol(pSol );
 int     saveSol(pSol );
 int     scaleMesh(pMesh);
 int     unscaleMesh(pMesh);
-int     distance(pMesh ,pMesh ,pBucket,pSol, int);
+int     distance(pMesh ,pMesh ,pSol, int);
 int     distancequad(pMesh ,pMesh ,pSol,int);
 int     initialization(pMesh ,pMesh);
 int     initializationsphere(pMesh ,pMesh);

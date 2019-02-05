@@ -326,7 +326,7 @@ int main(int argc,char **argv) {
     sol.err = LS_RES;
     if (!elasti1_3d(&extmesh,&sol) ) break;
     count1 = count;
-    count =  distance(&extmesh,&intmesh,bucket,&sol,count);
+    count =  distance(&extmesh,&intmesh,&sol,count);
     if (count1 < count ) count2 = 0;
     else count2++;
     if (!moveMesh(&extmesh,&sol)) return (1);

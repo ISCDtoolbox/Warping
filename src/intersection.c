@@ -59,7 +59,7 @@ pBucket newBucket_3d(pMesh mesh,int nmax) {
             s=0;
             while(bucket->link[linksize* bucket->head[ic]+s]) s++;
             bucket->link[linksize* bucket->head[ic]+s] = p;
-            //assert(s<linksize);
+            assert(s<linksize);
           }
         }
   }
@@ -77,11 +77,9 @@ static int RayTriaIntersection_3d( pMesh mesh, pTria pt1, double *pt,double *o,d
 
   ier=0;
   dm[0]=0;
-
   ppta = &mesh->point[pt1->v[0]];
   pptb = &mesh->point[pt1->v[1]];
   pptc = &mesh->point[pt1->v[2]];
-
   abx = pptb->c[0] - ppta->c[0];
   aby = pptb->c[1] - ppta->c[1];
   abz = pptb->c[2] - ppta->c[2];
@@ -141,24 +139,19 @@ static int RayTriaIntersection_3d( pMesh mesh, pTria pt1, double *pt,double *o,d
       }
     }
   }
-
   return (ier);
 
 }
 
 /* check intersection between triangles in mesh and ray ab */
-/* if intersection not found return 0 else store in q the intersection point (closer to a in case of multiple intersection ) */
-static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b, double *q) {
+/* if intersection not found return 0 else store in q the intersection point (the point closest to a in case of multiple intersection ) */
+static int RayMeshIntersection_3d(pMesh mesh,double *a, double *b, double *q) {
 
   pTria     pt1;
   double    dm[1],dd,dapp[1],qapp[3];
   int       i,j,k,ii,jj,kk,iib,jjb,kkb,ica,icb,ip,ip1,siz;
   int       imin,imax,jmin,jmax,kmin,kmax,ier,ier2,ic,linksize,s,iptria;
 
-  linksize = LINKSIZ;
-  siz = bucket->size;
-  siz = 64;
-  dd  = siz / (double)PRECI;
 
   for(i=0; i<3; i++){
     q[i]    = 0.0;
@@ -171,113 +164,29 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
   dm[0] = 1e3; // in dm we store the minimal distance
   dapp[0]=0;
   ier=0;
-  ier2=0;
-
-  /* check for intersecting triangles in the cell containing a */
-  ii = LS_MAX(0,(int)(dd * a[0])-1);
-  jj = LS_MAX(0,(int)(dd * a[1])-1);
-  kk = LS_MAX(0,(int)(dd * a[2])-1);
-  ica = (kk*siz + jj)*siz + ii;
-
-  iib = LS_MAX(0,(int)(dd * b[0])-1);
-  jjb = LS_MAX(0,(int)(dd * b[1])-1);
-  kkb = LS_MAX(0,(int)(dd * b[2])-1);
-  icb = (kkb*siz + jjb)*siz + iib;
+  ier2=0; 
 
 
-  if ( bucket->head[ica] ) {
 
-    ip1 = bucket->head[ica];
-    pt1 = &mesh->tria[ip1];
-    ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
-    if(ier2) {
-      if(dapp[0]<dm[0]){
-        dm[0] = dapp[0];
-       q[0] = qapp[0];
-       q[1] = qapp[1];
-       q[2] = qapp[2];
-       ier = LS_MAX(ier2,ier);
-        //return ier;
-      }
-    }
-
-    s=0;
-    iptria = (linksize*(bucket->head[ica]));
-    while ( bucket->link[iptria+s] ) {
-      ip = bucket->link[iptria+s];
-      pt1 = &mesh->tria[ip];
-
+  for (k=1; k<=mesh->nt; k++){
+      pt1 = &mesh->tria[k];
       ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
-      if (ier2) {
-        cont2++;
-        if(dapp[0] < dm[0]){
-        dm[0] = dapp[0];
-        q[0] = qapp[0];
-        q[1] = qapp[1];
-        q[2] = qapp[2];
-        ier = LS_MAX(ier,ier2);
-        //return ier;
+      if (ier2) { // if we found intersection we look for the closest point 
+      if(dapp[0] < dm[0]){
+      dm[0] = dapp[0];
+      q[0] = qapp[0];
+      q[1] = qapp[1];
+      q[2] = qapp[2];
+      ier = LS_MAX(ier,ier2);
       }
-      }
-      s++;
     }
-  }
 
-  if(ica==icb) return ier;
-  else{
-    imin = LS_MIN(ii,iib);
-    imax = LS_MAX(ii,iib);
-    jmin = LS_MIN(jj,jjb);
-    jmax = LS_MAX(jj,jjb);
-    kmin = LS_MIN(kk,kkb);
-    kmax = LS_MAX(kk,kkb);
-
-    for (k=kmin; k<=kmax; k++)
-      for (j=jmin; j<=jmax; j++)
-        for (i=imin; i<=imax; i++){
-          if ( ii == i && jj == j && kk == k )  continue;
-          ic  = (k*siz + j)*siz + i;
-          if ( bucket->head[ic] ) {
-            ip1 = bucket->head[ic];
-            pt1 = &mesh->tria[ip1];
-            ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
-            if(ier2) {
-              ip  = ip1;
-              if(dapp[0] < dm[0]){
-              dm[0]=dapp[0];
-              q[0] = qapp[0];
-              q[1] = qapp[1];
-              q[2] = qapp[2];
-              ier = LS_MAX(ier,ier2);
-              //return ier;
-              }
-            }
-            iptria = (linksize*(bucket->head[ic]));
-            s=0;
-            while ( bucket->link[iptria+s]) {
-              ip = bucket->link[iptria+s];
-              pt1 = &mesh->tria[ip];
-              ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
-              if (ier2) {
-                if(dapp[0] < dm[0]){
-                dm[0] = dapp[0];
-                q[0] = qapp[0];
-                q[1] = qapp[1];
-                q[2] = qapp[2];
-                ier = LS_MAX(ier,ier2);
-                //return ier;
-                }
-              }
-              s++;
-            }
-          }
-        }
   }
 
   return(ier);
 }
 
-int distance( pMesh extmesh, pMesh intmesh, pBucket bucket, pSol sol, int count) {
+int distance( pMesh extmesh, pMesh intmesh, pSol sol, int count) {
 
   pPoint  ppt;
   int     k,i,is,l,ier;
@@ -294,7 +203,7 @@ int distance( pMesh extmesh, pMesh intmesh, pBucket bucket, pSol sol, int count)
       a[0] = ppt->c[0];
       a[1] = ppt->c[1];
       a[2] = ppt->c[2];
-      ier=RayMeshIntersection_3d(intmesh,bucket,a,b,q);
+      ier=RayMeshIntersection_3d(intmesh,a,b,q);
       if(ier) {   /* if intersection found the solution is updated */
         ppt->ref=25;
         count ++;
