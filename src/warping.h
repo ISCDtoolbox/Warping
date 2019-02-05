@@ -37,7 +37,7 @@
 #define LS_TGV        1.e+30
 
 #define MAXIT         100
-#define LOAD          30 
+#define LOAD          50
 
 #define LS_MAX(a,b)   ( ((a) < (b)) ? (b) : (a) )
 #define LS_MIN(a,b)   ( ((a) < (b)) ? (a) : (b) )
