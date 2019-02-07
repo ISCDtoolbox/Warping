@@ -1,8 +1,9 @@
 #include "warping.h"
 extern Info   info;
 
-#define LINKSIZ 800;
-
+// LINKSIZ defined an approximate number of triangles that can
+// be shared with a bucket
+#define LINKSIZ 800 
 
 /* create bucket structure and store triangles */
 pBucket newBucket_3d(pMesh mesh,int nmax) {
@@ -18,7 +19,10 @@ pBucket newBucket_3d(pMesh mesh,int nmax) {
   bucket = (Bucket*)malloc(sizeof(Bucket));
   assert(bucket);
   bucket->size = nmax;
-  bucket->head = (int*)calloc(nmax*nmax*nmax+1,sizeof(int));
+
+  // Doubled allowed size to avoid overflow when testing
+  // rays with points out of cube ]0,1[^3
+  bucket->head = (int*)calloc(8*nmax*nmax*nmax+1,sizeof(int));
   assert(bucket->head);
   bucket->link = (int*)calloc(linksize*(mesh->nt+1),sizeof(int));
   assert(bucket->link);
@@ -59,7 +63,8 @@ pBucket newBucket_3d(pMesh mesh,int nmax) {
             s=0;
             while(bucket->link[linksize* bucket->head[ic]+s]) s++;
             bucket->link[linksize* bucket->head[ic]+s] = p;
-            //assert(s<linksize);
+            // security issue you must increase linksize if assert fails
+            assert(s<linksize); 
           }
         }
   }
@@ -76,7 +81,7 @@ static int RayTriaIntersection_3d( pMesh mesh, pTria pt1, double *pt,double *o,d
   int     ier;
 
   ier=0;
-  dm[0]=0;
+  dm[0]=0.;
 
   ppta = &mesh->point[pt1->v[0]];
   pptb = &mesh->point[pt1->v[1]];
@@ -102,9 +107,10 @@ static int RayTriaIntersection_3d( pMesh mesh, pTria pt1, double *pt,double *o,d
   /* B = dot ( n , PO) */
   B = - (n[0]*(pt[0]-o[0]) + n[1]*(pt[1]-o[1]) + n[2]*(pt[2]-o[2]));
 
-  if (fabs(B)>0) {
+  if (fabs(B)>0.) {
     /* get intersection ray/plane of the triangle Q */
     r = A/B;
+
     if ( ( r>= 0.0) && (r <=1)) {
       qapp[0] = pt[0] -r* (pt[0]-o[0]);
       qapp[1] = pt[1] -r* (pt[1]-o[1]);
@@ -124,6 +130,7 @@ static int RayTriaIntersection_3d( pMesh mesh, pTria pt1, double *pt,double *o,d
       F = -((pptb->c[0] - qapp[0])*acx + (pptb->c[1] - qapp[1])*acy + (pptb->c[2] - qapp[2])*acz) +H ;
 
       det = C*F - E*D ;
+
       if (det != 0.0) {
         a = (F*G-D*H)/det;
         if (a>=0) {
@@ -157,7 +164,6 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
 
   linksize = LINKSIZ;
   siz = bucket->size;
-  siz = 64;
   dd  = siz / (double)PRECI;
 
   for(i=0; i<3; i++){
@@ -168,7 +174,7 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
   cont1 = 0;
   cont2=0;
   cont3=0;
-  dm[0] = 1e3; // in dm we store the minimal distance
+  dm[0] = 1.e3; // in dm we store the minimal distance
   dapp[0]=0;
   ier=0;
   ier2=0;
@@ -184,25 +190,27 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
   kkb = LS_MAX(0,(int)(dd * b[2])-1);
   icb = (kkb*siz + jjb)*siz + iib;
 
+  // Add a security warning: if it appears, everflow can happen when testing
+  // points of rays (meaning there are out of cube ]0,2[^3 should not happen)
+  if (ica>8*siz*siz*siz || icb>8*siz*siz*siz)
+  {
+      fprintf(stderr,"\nWarning: ray a=(%lf,%lf,%lf) ",a[0],a[1],a[2]);
+      fprintf(stderr,"b=(%lf,%lf,%lf) out of range ]0,1[^3\n",b[0],b[1],b[2]);
+      fprintf(stderr,"You should not pass here or very very rarely.\n");
+      return ier;
+  }
 
   if ( bucket->head[ica] ) {
-
     ip1 = bucket->head[ica];
     pt1 = &mesh->tria[ip1];
-
-    // Attention ici!!! Il peut y avoir un seg fault due à une taille de
-    // bucket trop petit. Essayer d'augmenter la constante de préprocesseur
-    // BUCKSIZ (64 par défault) dans le fichier main.c. On a essayé 128
-    // et ca marche (04/02/2019 16:41)
-
     ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
     if(ier2) {
       if(dapp[0]<dm[0]){
         dm[0] = dapp[0];
-       q[0] = qapp[0];
-       q[1] = qapp[1];
-       q[2] = qapp[2];
-       ier = LS_MAX(ier2,ier);
+        q[0] = qapp[0];
+        q[1] = qapp[1];
+        q[2] = qapp[2];
+        ier = LS_MAX(ier2,ier);
         //return ier;
       }
     }
@@ -212,23 +220,17 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
     while ( bucket->link[iptria+s] ) {
       ip = bucket->link[iptria+s];
       pt1 = &mesh->tria[ip];
-
-      // Attention ici!!! Il peut y avoir un seg fault due à une taille de
-      // bucket trop petit. Essayer d'augmenter la constante de préprocesseur
-      // BUCKSIZ (64 par défault) dans le fichier main.c. On a essayé 128
-      // et ca marche (04/02/2019 16:41)
-
       ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
       if (ier2) {
         cont2++;
         if(dapp[0] < dm[0]){
-        dm[0] = dapp[0];
-        q[0] = qapp[0];
-        q[1] = qapp[1];
-        q[2] = qapp[2];
-        ier = LS_MAX(ier,ier2);
-        //return ier;
-      }
+          dm[0] = dapp[0];
+          q[0] = qapp[0];
+          q[1] = qapp[1];
+          q[2] = qapp[2];
+          ier = LS_MAX(ier,ier2);
+          //return ier;
+        }
       }
       s++;
     }
@@ -255,12 +257,12 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
             if(ier2) {
               ip  = ip1;
               if(dapp[0] < dm[0]){
-              dm[0]=dapp[0];
-              q[0] = qapp[0];
-              q[1] = qapp[1];
-              q[2] = qapp[2];
-              ier = LS_MAX(ier,ier2);
-              //return ier;
+                dm[0]=dapp[0];
+                q[0] = qapp[0];
+                q[1] = qapp[1];
+                q[2] = qapp[2];
+                ier = LS_MAX(ier,ier2);
+                //return ier;
               }
             }
             iptria = (linksize*(bucket->head[ic]));
@@ -271,12 +273,12 @@ static int RayMeshIntersection_3d(pMesh mesh,pBucket bucket,double *a, double *b
               ier2=RayTriaIntersection_3d(mesh,pt1,a,b,dapp,qapp);
               if (ier2) {
                 if(dapp[0] < dm[0]){
-                dm[0] = dapp[0];
-                q[0] = qapp[0];
-                q[1] = qapp[1];
-                q[2] = qapp[2];
-                ier = LS_MAX(ier,ier2);
-                //return ier;
+                  dm[0] = dapp[0];
+                  q[0] = qapp[0];
+                  q[1] = qapp[1];
+                  q[2] = qapp[2];
+                  ier = LS_MAX(ier,ier2);
+                  //return ier;
                 }
               }
               s++;
@@ -298,7 +300,9 @@ int distance( pMesh extmesh, pMesh intmesh, pBucket bucket, pSol sol, int count)
   chrono(ON,&info.ctim[4]);
   if ( info.imprim ) fprintf(stdout,"  1.3 DISTANCE \n");
   for (k=1; k<=extmesh->np; k++) {
+
     ppt = &extmesh->point[k];
+
     is = 3*(k-1);
     if ( ppt->ref == 30) {
       for (i=0; i<3; i++)    b[i] = ppt->c[i] + sol->u[is+i];

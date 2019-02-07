@@ -1,6 +1,8 @@
 #include "warping.h"
-#define BUCKSIZ 64 //128 //64 // we have increased size of bucket (yield errors)
-                         // 04/02/2019 16:48
+
+#define BUCKSIZ 64 // BUCKSIZ defines the discretization of the cube [0,1[^3
+                   // in BUCKSIZ^3 points (Warning: mesh must be in [0,1]^3)
+
 Info  info;
 
 static void excfun(int sigid) {
